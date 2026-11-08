@@ -522,6 +522,64 @@ def fit_all(X, y, cv, alphas):
     
     return models
 
-# Step 16 - test_report (not yet solved)
-# TODO: implement
+# Step 16 - test_report
+import numpy as np
+from sklearn.metrics import mean_squared_error
+
+def test_report(models, X_test, y_test):
+    report = {}
+    
+    for name, (model, features, setting) in models.items():
+        # Select the specific features for this model
+        if hasattr(X_test, "iloc"):
+            X_subset = X_test[features]
+        else:
+            # If X_test is a numpy array, features might be indices
+            X_subset = X_test[:, features]
+            
+        # Predict
+        preds = model.predict(X_subset)
+        preds = np.ravel(preds)
+        
+        # Calculate RMSE rounded to 1 decimal
+        rmse = round(float(np.sqrt(mean_squared_error(y_test, preds))), 1)
+        
+        # Count number of features / nonzero effect
+        if name == 'lasso_cv':
+            # Count nonzero coefficients of the LassoCV step
+            lassocv_step = model.named_steps['lassocv']
+            n_features = int(np.sum(np.abs(lassocv_step.coef_) > 1e-8))
+        elif name == 'forward_1se':
+            n_features = int(setting)
+        else:
+            if isinstance(features, (list, np.ndarray)):
+                n_features = len(features)
+            else:
+                n_features = X_test.shape[1]
+                
+        report[name] = {
+            'rmse': rmse,
+            'n_features': n_features,
+            'setting': setting
+        }
+        
+    return report
+
+def best_method(report):
+    # Find the name with the smallest RMSE
+    return min(report, key=lambda k: report[k]['rmse'])
+
+def format_table(report):
+    # Sort methods by RMSE ascending
+    sorted_items = sorted(report.items(), key=lambda item: item[1]['rmse'])
+    
+    lines = []
+    for name, info in sorted_items:
+        rmse = info['rmse']
+        n = info['n_features']
+        setting = info['setting']
+        line = f"{name:12s} rmse={rmse:6.1f} features={n:2d} setting={setting}"
+        lines.append(line)
+        
+    return lines
 
