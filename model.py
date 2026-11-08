@@ -468,8 +468,59 @@ def best_components(components, means, ses):
     m_1se = one_se_rule(components, means, ses, prefer='smaller')
     return m_min, m_1se
 
-# Step 15 - fit_all (not yet solved)
-# TODO: implement
+# Step 15 - fit_all
+import numpy as np
+from sklearn.linear_model import LinearRegression, LassoCV
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+
+def fit_all(X, y, cv, alphas):
+    # Get all feature names if X is a DataFrame, or indices
+    if hasattr(X, "columns"):
+        all_features = list(X.columns)
+    else:
+        all_features = list(range(X.shape[1]))
+        
+    models = {}
+    
+    # 1. OLS
+    ols_model = LinearRegression()
+    ols_model.fit(X, y)
+    models['ols'] = (ols_model, all_features, None)
+    
+    # 2. Forward Selection (one-SE rule)
+    _, size_1se, feats_1se = choose_subset(X, y, 'forward', cv)
+    forward_model = LinearRegression()
+    forward_model.fit(X[feats_1se], y)
+    models['forward_1se'] = (forward_model, feats_1se, size_1se)
+    
+    # 3. Ridge (one-SE penalty)
+    _, alpha_1se = choose_penalty(ridge_model, X, y, alphas, cv)
+    ridge_m = ridge_model(alpha_1se)
+    ridge_m.fit(X, y)
+    models['ridge_1se'] = (ridge_m, all_features, alpha_1se)
+    
+    # 4. Lasso CV
+    lasso_cv_pipe = make_pipeline(StandardScaler(), LassoCV(cv=cv, max_iter=20000, random_state=0))
+    lasso_cv_pipe.fit(X, y)
+    best_alpha = round(float(lasso_cv_pipe.named_steps['lassocv'].alpha_), 4)
+    models['lasso_cv'] = (lasso_cv_pipe, all_features, best_alpha)
+    
+    # 5. PCR (one-SE components)
+    pcr_comps, pcr_means, pcr_ses = pcr_curve(X, y, cv)
+    pcr_min_comp, pcr_1se_comp = best_components(pcr_comps, pcr_means, pcr_ses)
+    pcr_m = pcr_model(pcr_1se_comp)
+    pcr_m.fit(X, y)
+    models['pcr_1se'] = (pcr_m, all_features, pcr_1se_comp)
+    
+    # 6. PLS (one-SE components)
+    pls_comps, pls_means, pls_ses = pls_curve(X, y, cv)
+    pls_min_comp, pls_1se_comp = best_components(pls_comps, pls_means, pls_ses)
+    pls_m = pls_model(pls_1se_comp)
+    pls_m.fit(X, y)
+    models['pls_1se'] = (pls_m, all_features, pls_1se_comp)
+    
+    return models
 
 # Step 16 - test_report (not yet solved)
 # TODO: implement
