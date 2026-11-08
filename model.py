@@ -38,8 +38,46 @@ def train_test(X, y, test_size=0.25, random_state=0):
     )
     return X_train, X_test, y_train, y_test
 
-# Step 3 - validation_set_curve (not yet solved)
-# TODO: implement
+# Step 3 - validation_set_curve
+import numpy as np
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import PolynomialFeatures
+
+def poly_model(degree):
+    return make_pipeline(PolynomialFeatures(degree), LinearRegression())
+
+def validation_set_curve(X, y, feature, degrees, random_state):
+    X_feat = X[[feature]]
+    X_train, X_val, y_train, y_val = train_test_split(
+        X_feat, y, test_size=0.5, random_state=random_state
+    )
+    
+    curve_results = {}
+    for deg in degrees:
+        model = poly_model(deg)
+        model.fit(X_train, y_train)
+        preds = model.predict(X_val)
+        mse = mean_squared_error(y_val, preds)
+        curve_results[deg] = round(float(mse), 1)
+        
+    return curve_results
+
+def curve_spread(X, y, feature, degrees, seeds):
+    deg_errors = {deg: [] for deg in degrees}
+    
+    for seed in seeds:
+        res = validation_set_curve(X, y, feature, degrees, seed)
+        for deg, mse in res.items():
+            deg_errors[deg].append(mse)
+            
+    spreads = {}
+    for deg in degrees:
+        spreads[deg] = round(float(max(deg_errors[deg]) - min(deg_errors[deg])), 1)
+        
+    return spreads
 
 # Step 4 - cv_mse (not yet solved)
 # TODO: implement
