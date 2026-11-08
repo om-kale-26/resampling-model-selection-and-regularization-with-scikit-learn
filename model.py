@@ -257,8 +257,55 @@ def best_size(sizes, means):
     min_idx = int(np.argmin(means))
     return sizes[min_idx]
 
-# Step 9 - one_se_rule (not yet solved)
-# TODO: implement
+# Step 9 - one_se_rule
+import numpy as np
+
+def one_se_rule(values, means, ses, prefer='smaller'):
+    values = np.array(values)
+    means = np.array(means)
+    ses = np.array(ses)
+    
+    # 1. Locate the model with the minimum error
+    min_idx = np.argmin(means)
+    
+    # 2. Define the threshold: minimum error + standard error of that specific minimum model
+    threshold = means[min_idx] + ses[min_idx]
+    
+    # 3. Filter models whose mean is at most the threshold
+    valid_mask = means <= threshold
+    valid_values = values[valid_mask]
+    
+    if prefer == 'smaller':
+        return valid_values[0]  # Simplest model within 1 SE
+    else:
+        return valid_values[-1] # Largest model within 1 SE
+
+def choose_subset(X, y, direction, cv):
+    # 1. Run the stepwise path
+    path = stepwise_path(X, y, direction, cv)
+    
+    # 2. Score the path using cross-validation
+    sizes, means, ses = score_path(X, y, path, cv)
+    
+    # 3. Find the best size using the minimum mean error
+    size_min = best_size(sizes, means)
+    
+    # 4. Find the size using the one-standard-error rule
+    size_1se = one_se_rule(sizes, means, ses, prefer='smaller')
+    
+    # 5. Get the features corresponding to size_1se
+    # Check if path is a dict/mapping or list, and retrieve features correctly matching size_1se
+    if isinstance(path, dict):
+        features_1se = path[size_1se]
+    else:
+        # Find the exact index where sizes equals size_1se
+        try:
+            idx = list(sizes).index(size_1se)
+            features_1se = path[idx]
+        except (ValueError, IndexError):
+            features_1se = path[size_1se]
+    
+    return size_min, size_1se, features_1se
 
 # Step 10 - ridge_path (not yet solved)
 # TODO: implement
