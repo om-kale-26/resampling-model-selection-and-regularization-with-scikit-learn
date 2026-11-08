@@ -331,8 +331,43 @@ def coef_norms(path):
     norms = np.linalg.norm(path, axis=1)
     return np.round(norms, 2)
 
-# Step 11 - cv_curve (not yet solved)
-# TODO: implement
+# Step 11 - cv_curve
+import numpy as np
+from sklearn.model_selection import cross_val_score
+
+def cv_curve(make_model, X, y, values, cv):
+    means = []
+    ses = []
+    
+    for val in values:
+        model = make_model(val)
+        # Get negative mean squared errors from cross-validation
+        scores = cross_val_score(model, X, y, cv=cv, scoring='neg_mean_squared_error')
+        
+        # Convert negative MSE to positive MSE error for evaluation
+        mse_scores = -scores
+        
+        mean_err = np.mean(mse_scores)
+        # Standard error: standard deviation divided by square root of number of folds
+        se_err = np.std(mse_scores, ddof=1) / np.sqrt(len(mse_scores))
+        
+        means.append(round(float(mean_err), 1))
+        ses.append(round(float(se_err), 1))
+        
+    return means, ses
+
+def choose_penalty(make_model, X, y, values, cv):
+    # Compute the cross-validation curve
+    means, ses = cv_curve(make_model, X, y, values, cv)
+    
+    # Find the value that gives the minimum mean error
+    min_idx = np.argmin(means)
+    value_min = values[min_idx]
+    
+    # Use the one-SE rule preferring larger penalty values (more regularization)
+    value_1se = one_se_rule(values, means, ses, prefer='larger')
+    
+    return value_min, value_1se
 
 # Step 12 - lasso_path (not yet solved)
 # TODO: implement
