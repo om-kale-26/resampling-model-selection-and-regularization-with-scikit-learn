@@ -79,8 +79,39 @@ def curve_spread(X, y, feature, degrees, seeds):
         
     return spreads
 
-# Step 4 - cv_mse (not yet solved)
-# TODO: implement
+# Step 4 - cv_mse
+import numpy as np
+from sklearn.model_selection import KFold, LeaveOneOut, cross_val_score
+
+def cv_mse(estimator, X, y, k=5, random_state=0):
+    # Set up KFold cross-validation
+    kf = KFold(n_splits=k, shuffle=True, random_state=random_state)
+    
+    # Compute negative mean squared error scores across folds
+    scores = cross_val_score(estimator, X, y, cv=kf, scoring='neg_mean_squared_error')
+    
+    # Convert to positive MSE
+    mse_scores = -scores
+    
+    mean_val = float(np.mean(mse_scores))
+    
+    # Standard error: standard deviation (ddof=1) divided by sqrt(k)
+    se_val = float(np.std(mse_scores, ddof=1) / np.sqrt(k))
+    
+    return round(mean_val, 2), round(se_val, 2)
+
+def loocv_mse(estimator, X, y):
+    # Set up Leave-One-Out cross-validation
+    loo = LeaveOneOut()
+    
+    # Compute negative mean squared error scores
+    scores = cross_val_score(estimator, X, y, cv=loo, scoring='neg_mean_squared_error')
+    
+    # Convert to positive MSE and get the average over all held-out points
+    mse_scores = -scores
+    mean_val = float(np.mean(mse_scores))
+    
+    return round(mean_val, 2)
 
 # Step 5 - cv_spread_by_k (not yet solved)
 # TODO: implement
