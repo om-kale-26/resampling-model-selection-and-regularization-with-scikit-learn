@@ -113,8 +113,30 @@ def loocv_mse(estimator, X, y):
     
     return round(mean_val, 2)
 
-# Step 5 - cv_spread_by_k (not yet solved)
-# TODO: implement
+# Step 5 - cv_spread_by_k
+import numpy as np
+
+def cv_spread_by_k(estimator, X, y, ks, seeds):
+    results = {}
+    for k in ks:
+        seed_means = []
+        for seed in seeds:
+            # Call cv_mse from previous step; index [0] is the mean MSE
+            mean_mse, _ = cv_mse(estimator, X, y, k=k, random_state=seed)
+            seed_means.append(mean_mse)
+        
+        avg_over_seeds = float(np.mean(seed_means))
+        std_over_seeds = float(np.std(seed_means, ddof=1))
+        
+        results[k] = (round(avg_over_seeds, 1), round(std_over_seeds, 1))
+        
+    return results
+
+def compare_with_loocv(estimator, X, y, ks, seeds):
+    return {
+        'loocv': loocv_mse(estimator, X, y),
+        'kfold': cv_spread_by_k(estimator, X, y, ks, seeds)
+    }
 
 # Step 6 - bootstrap_coefficients (not yet solved)
 # TODO: implement
