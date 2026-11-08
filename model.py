@@ -369,8 +369,45 @@ def choose_penalty(make_model, X, y, values, cv):
     
     return value_min, value_1se
 
-# Step 12 - lasso_path (not yet solved)
-# TODO: implement
+# Step 12 - lasso_path
+import numpy as np
+from sklearn.linear_model import Lasso, LassoCV
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+
+def lasso_model(alpha):
+    return make_pipeline(StandardScaler(), Lasso(alpha=alpha, max_iter=20000))
+
+def lasso_path(X, y, alphas):
+    coefs = []
+    for alpha in alphas:
+        model = lasso_model(alpha)
+        model.fit(X, y)
+        coefs.append(model.named_steps['lasso'].coef_)
+    return np.array(coefs)
+
+def nonzero_features(coef, names, tol=1e-8):
+    coef = np.array(coef)
+    names = np.array(names)
+    # Filter and convert back to a standard list of Python strings
+    mask = np.abs(coef) > tol
+    return names[mask].tolist()
+
+def lasso_cv(X, y, cv):
+    model = make_pipeline(StandardScaler(), LassoCV(cv=cv, max_iter=20000, random_state=0))
+    model.fit(X, y)
+    
+    lasso_cv_step = model.named_steps['lassocv']
+    alpha_val = round(float(lasso_cv_step.alpha_), 4)
+    coefs = lasso_cv_step.coef_
+    
+    if hasattr(X, "columns"):
+        names = list(X.columns)
+    else:
+        names = [f"x{i}" for i in range(X.shape[1])]
+        
+    selected = nonzero_features(coefs, names)
+    return alpha_val, selected
 
 # Step 13 - pcr_model (not yet solved)
 # TODO: implement
