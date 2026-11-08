@@ -138,8 +138,55 @@ def compare_with_loocv(estimator, X, y, ks, seeds):
         'kfold': cv_spread_by_k(estimator, X, y, ks, seeds)
     }
 
-# Step 6 - bootstrap_coefficients (not yet solved)
-# TODO: implement
+# Step 6 - bootstrap_coefficients
+import numpy as np
+from sklearn.linear_model import LinearRegression
+
+def bootstrap_coefficients(X, y, n_boot=200, random_state=0):
+    rng = np.random.default_rng(random_state)
+    n = len(X)
+    coefs = []
+    
+    for _ in range(n_boot):
+        # Sample row indices with replacement
+        indices = rng.integers(0, n, n)
+        X_b = X.iloc[indices]
+        y_b = y.iloc[indices]
+        
+        model = LinearRegression().fit(X_b, y_b)
+        coefs.append(model.coef_)
+        
+    return np.array(coefs)
+
+def bootstrap_se(coefs):
+    # Standard deviation over bootstrap replicates (ddof=1), rounded to 2 decimals
+    se = np.std(coefs, axis=0, ddof=1)
+    return np.round(se, 2)
+
+def ols_standard_errors(X, y):
+    # Convert inputs to numpy arrays if they are pandas
+    X_arr = X.values if hasattr(X, "values") else np.array(X)
+    y_arr = y.values if hasattr(y, "values") else np.array(y)
+    
+    n, p = X_arr.shape
+    
+    # Design matrix A = [1, X]
+    A = np.hstack([np.ones((n, 1)), X_arr])
+    
+    # Fit model to get predictions and residuals for RSS
+    model = LinearRegression().fit(X_arr, y_arr)
+    preds = model.predict(X_arr)
+    rss = np.sum((y_arr - preds) ** 2)
+    
+    # Variance estimate sigma^2 = RSS / (n - p - 1)
+    sigma2 = rss / (n - p - 1)
+    
+    # Standard errors: sqrt(sigma^2 * diag((A^T A)^-1))
+    inv_ATA = np.linalg.inv(A.T @ A)
+    se_full = np.sqrt(sigma2 * np.diagonal(inv_ATA))
+    
+    # Drop the intercept entry (first element) and round to 2 decimals
+    return np.round(se_full[1:], 2)
 
 # Step 7 - stepwise_path (not yet solved)
 # TODO: implement
